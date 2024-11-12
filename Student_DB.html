@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div class="submission">
+        <h2 class="heading">Student Form</h2>
+        <div>
+            <input type="text" id="firstName" placeholder="First Name" >
+            <input type="text" id="lastName" placeholder="Last Name" >
+            <input type="email" id="email" placeholder="Email" >
+            <button class="button" onclick="submitForm()">Submit</button>
+        </div>
+    </div>
+    <div class="searchbox">
+        <h3>Search Student</h3>
+        <div>
+            <input type="text" id="searchText" placeholder="Enter Student's Name">
+            <button onclick="searchData()">Search</button>
+        </div>
+        <div id="notification" class="notification">
+            Message:
+        </div>
+    </div>
+    <script>
+        let db;
+
+        document.onreadystatechange = (event) => {
+            if (document.readyState === "complete") {
+                let note = document.getElementById("notification");
+                const openRequest = indexedDB.open("studentDB", 7);
+
+                openRequest.onupgradeneeded = (event) => {
+                    db = event.target.result;
+                    console.log("Defined onupgradeneeded");
+                    const studentInfoStore = db.createObjectStore("student", { keyPath: "name", autoIncrement: false });
+                };
+
+                openRequest.onsuccess = (event) => {
+                    console.log("Success");
+                    note.innerHTML += "Database Initialized";
+                    db = event.target.result;
+                };
+
+                openRequest.onerror = (event) => {
+                    console.log("Error Occurred: " + event);
+                };
+            }
+        };
+
+        function addStudent(data) {
+            const tx = db.transaction("student", "readwrite");
+            const store = tx.objectStore('student');
+            return store.add(data);
+        }
+
+        function searchStudent(searchText) {
+            const tx = db.transaction("student", "readonly");
+            const store = tx.objectStore('student');
+            return store.get(searchText);
+        }
+
+        function submitForm() {
+            console.log("Form Submission");
+            let note = document.getElementById("notification");
+
+            let firstName = document.getElementById("firstName").value;
+            let lastName = document.getElementById("lastName").value;
+            let email = document.getElementById("email").value;
+            let name = `${firstName} ${lastName}`;
+
+            const formData = {
+                firstName: firstName,
+                lastName: lastName,
+                name: name,
+                email: email,
+                created: new Date().getTime()
+            };
+            console.log(formData);
+
+            const addRequest = addStudent(formData);
+            addRequest.onsuccess = () => {
+                note.innerHTML += "Request Successful. ";
+                searchStudent(name).onsuccess = (event) => {
+                    const record = event.target.result;
+                    console.log(record);
+                   // note.innerHTML += `${JSON.stringify(record)}`;
+                };
+            };
+            addRequest.onerror = (event) => {
+                note.innerHTML += "Request Failed. ";
+                console.log("Add Error:", event);
+            };
+        }
+
+        function searchData() {
+            console.log("Search is started");
+            let note = document.getElementById("notification");
+
+            let searchText = document.getElementById("searchText").value;
+            const searchRequest = searchStudent(searchText);
+            searchRequest.onsuccess = (event) => {
+                note.innerHTML += "Request Successful. ";
+                const record = event.target.result;
+                console.log(record);
+                note.innerHTML += `${JSON.stringify(record)}`;
+            };
+            searchRequest.onerror = (event) => {
+                note.innerHTML += "Request Failed. ";
+                console.log("Search Error:", event);
+            };
+        }
+    </script>
+</body>
+</html>
